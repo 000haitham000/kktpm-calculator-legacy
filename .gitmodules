@@ -1,0 +1,3 @@
+[submodule "tx2ex"]
+	path = tx2ex
+	url = https://github.com/000haitham000/tx2ex.git
