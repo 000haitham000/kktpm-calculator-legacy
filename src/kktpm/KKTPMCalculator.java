@@ -205,6 +205,7 @@ public class KKTPMCalculator {
 //            }
 //        }
 //        // TO-BE-REMOVED-END
+        
         // Form A_j
         RealMatrix aj = MatrixUtils.createRealMatrix(gv.getDimension(), xv.getDimension());
         for (int i = 0; i < jacobianGMatrix.getRowDimension(); i++) {
@@ -226,6 +227,7 @@ public class KKTPMCalculator {
 //            }
 //        }
 //        // TO-BE-REMOVED-END
+
         // Form the big matrix used later for factorization
         // Start by forming the four sub-matrices
         RealMatrix topLeft = am.multiply(am.transpose()).add(
@@ -578,7 +580,7 @@ public class KKTPMCalculator {
         for (int i = 0; i < tempV.getDimension(); i++) {
             sumV += Math.pow(tempV.getEntry(i), 2);
         }
-        // Calculate and return the final Direct KKYPM
+        // Calculate and return the final Direct KKTPM
         double kktpmDirect;
         // DOES IT WORK FOR BOTH CONSTRAINED AND UNCONSTRAINED ?! (CHECK REQUIRED)
         kktpmDirect = Math.pow(1 - umSum, 2) + sumV;
@@ -1061,13 +1063,19 @@ public class KKTPMCalculator {
         double[] u = getLagrangeMultiplers(x, f, z, g, jacobianF, jacobianG, rho);
         //double kktpmDirect = getDirectKKTPM(f, g, u);
         double kktpmDirect = getDirectKKTPM(x, f, z, g, jacobianF, jacobianG, u, rho);
-        double kktpmAdjusted = getAdjustedKKTPM(f, g, u);
-        double kktpmProjected = getProjectedKKTPM(f, g, u, kktpmDirect);
-        if (kktpmAdjusted > kktpmDirect) {
+        // Check if you need the approximation
+        if (isApproximationRequired(u, g)) {
+            double kktpmAdjusted = getAdjustedKKTPM(f, g, u);
+            double kktpmProjected = getProjectedKKTPM(f, g, u, kktpmDirect);
             return (kktpmDirect + kktpmAdjusted + kktpmProjected) / 3;
         } else {
             return kktpmDirect;
         }
+//        if (kktpmAdjusted > kktpmDirect) {
+//            return (kktpmDirect + kktpmAdjusted + kktpmProjected) / 3;
+//        } else {
+//            return kktpmDirect;
+//        }
     }
     // </editor-fold>
 
@@ -1319,4 +1327,20 @@ public class KKTPMCalculator {
 //        System.out.format("%12s  = %10.6f%n", "KKTPM", kktpm);
 //    }
     // </editor-fold>
+    private static boolean isApproximationRequired(double[] u, double[] g) {
+        RealVector um = new ArrayRealVector(u, 0, u.length - g.length);
+        RealVector uj = new ArrayRealVector(u, u.length - g.length, g.length);
+        RealVector gv = new ArrayRealVector(g);
+        double sum = 0;
+        for (int i = 0; i < um.getDimension(); i++) {
+            sum += um.getEntry(i);
+        }
+        RealVector negativeGv = gv.mapMultiply(-1);
+        double ujgj = negativeGv.dotProduct(uj);
+        if(sum + ujgj * (1 + ujgj) > 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
